@@ -37,7 +37,7 @@ const pageUrl = "https://www.twitch.tv/anomaly"
 		if (hours)
 			str += `${hours} hours and `
 		
-		str += `${hours} minutes`
+		str += `${minutes} minutes`
 	
 		process.stdout.write(str)
 		process.stdout.cursorTo(0)
