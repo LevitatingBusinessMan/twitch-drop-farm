@@ -1,68 +1,73 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer')
+const readline = require('readline')
+const fs = require("fs")
 
-const readline = require('readline');
+const tokens = require("./tokens")
 
-const usernames = []
-const passwords = [];
+const headless = !process.argv.includes("--headless-off")
+const screenshot = process.argv.includes("--screenshot")
 
-(async () => {
-	const browser = await puppeteer.launch({headless: false});
-	const context = await browser.createIncognitoBrowserContext();
+const pageUrl = "https://www.twitch.tv/anomaly"
 
-	for (let i = 0; i < usernames.length; i++) {
-		await watchStream(usernames[i], passwords[i])
+;(async () => {
+	const browser = await puppeteer.launch({headless})
+
+	for (let user in tokens) {
+		const token = tokens[user]
+		await watchStream(user, token)
 	}
 
-	console.log("All watching")
-
-	function watchStream(username, password) {
+	const startDate = new Date()
+	
+	console.log()
+	setInterval(() => {
+	
+		process.stdout.clearLine()
+	
+		let str = `Watching ${pageUrl} for `
+	
+		const time = (new Date()).getTime() - startDate.getTime()
+	
+		const milsInHour = 60 * 60 * 1000
+		const milsInMinute = 60 * 1000
+	
+		const hours = Math.floor(time / milsInHour)
+		const minutes = Math.floor(time % milsInHour / milsInMinute)
+	
+		if (hours)
+			str += `${hours} hours and `
 		
+		str += `${hours} minutes`
+	
+		process.stdout.write(str)
+		process.stdout.cursorTo(0)
+	
+	}, 1000)
+
+	function watchStream(user, token) {
+
 		return new Promise(async resolve => {
 
-			const page = await context.newPage();
-			await page.goto('https://www.twitch.tv/anomaly');
-			
-			 page.evaluate(() => {document.querySelector("[data-test-selector=\"anon-user-menu__login-button\"]").click()})
-			
-			await page.waitForSelector("[aria-label=\"Enter your username\"]")
-			
-			await page.evaluate(() => document.querySelector("[aria-label=\"Enter your username\"]").select())
-		
-			for (const char of username) {
-				await page.keyboard.sendCharacter(char)
-			}
-		
-			await page.evaluate(() => document.querySelector("[aria-label=\"Enter your password\"]").select())
-		
-			for (const char of password) {
-				await page.keyboard.sendCharacter(char)
-			}
-		
-			await page.evaluate(() => document.querySelector("[data-a-target=\"passport-login-button\"]").click())
-		
-			console.log("waiting 3 seconds to login")
-			await wait(3000);
-		
-			//Check if we need a verification key
-			if (await page.$("[aria-label=\"Verification code input\"]") !== null) {
-				const rl = readline.createInterface({
-					input: process.stdin,
-					output: process.stdout
-				});
-		
-				rl.question(`Verification code for ${username}:`, async code => {
-					await page.evaluate(() => document.querySelector(".tw-pd-r-1 input").select())
-					for (const char of code) {
-						await page.keyboard.sendCharacter(char)
-					}
-					console.log(username, "should be set");
-					resolve()
+			console.log(`Attempting to login ${user}...`)
+			const page = await browser.newPage();
+			page.setCookie({ name: "auth-token", value: token, domain: "www.twitch.tv" })
+			await page.goto(pageUrl)
+
+			if (await page.$("[data-test-selector=\"anon-user-menu__login-button\"]") !== null)
+				console.log("\033[31;1mLevitating1:\033[0;31m did not login, is the token correct?\033[0m")
+			else console.log("\033[32;1mLevitating1:\033[0;32m Logged in!\033[0m")
+
+			if (screenshot) {
+				if (!fs.existsSync("./screenshots")) {
+					fs.mkdirSync("./screenshots");
+				}
+
+				page.screenshot({ path: `./screenshots/${user}.png` }).then(() => {
+					console.log("Screenshot made for", user)
 				})
 			}
-			else {
-				console.log(username, "should be set");
-				resolve()
-			}
+
+			resolve()
 
 		})
 
