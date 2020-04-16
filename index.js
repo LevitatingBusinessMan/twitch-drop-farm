@@ -24,7 +24,7 @@ const pageUrl = "https://www.twitch.tv/anomaly"
 	
 		process.stdout.clearLine()
 	
-		let str = `Watching ${"\033[35m" + pageUrl + "\033[30m"} for `
+		let str = `Watching ${"\033[35m" + pageUrl + "\033[0m"} for `
 	
 		const time = (new Date()).getTime() - startDate.getTime()
 	
