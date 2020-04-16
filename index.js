@@ -54,8 +54,8 @@ const pageUrl = "https://www.twitch.tv/anomaly"
 			await page.goto(pageUrl)
 
 			if (await page.$("[data-test-selector=\"anon-user-menu__login-button\"]") !== null)
-				console.log(`\033[31;1m${user}:\033[0;31m did not login, is the token correct?\033[0m`)
-			else console.log(`\033[32;1m${user}:\033[0;32m Logged in!\033[0m`)
+				console.log("\033[31;1m" + user + ":\033[0;31m did not login, is the token correct?\033[0m")
+			else console.log("\033[32;1m" + user + ":\033[0;32m Logged in!\033[0m")
 
 			if (screenshot) {
 				if (!fs.existsSync("./screenshots")) {
