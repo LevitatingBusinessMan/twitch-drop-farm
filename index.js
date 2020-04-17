@@ -15,7 +15,70 @@ const pageUrl = "https://www.twitch.tv/anomaly"
 	for (let user in tokens) {
 		const token = tokens[user]
 		await watchStream(user, token)
+		.then(() => console.log("\033[32;1m" + user + ":\033[0;32m Logged in!\033[0m"))
+		.catch(() => console.log("\033[31;1m" + user + ":\033[0;31m did not login, is the token correct?\033[0m"))
 	}
+
+	(await browser.pages())[0].close()
+
+	setTimeout(() => startTimer(), 1000)
+
+	function watchStream(user, token) {
+
+		return new Promise(async (resolve, reject) => {
+
+			console.log(`Attempting to login ${user}...`)
+			
+			const context = await browser.createIncognitoBrowserContext()
+
+			const page = await context.newPage();
+			
+			
+			// Another way of ensuring no cookies are left
+			/* const client = await page.target().createCDPSession();
+			await client.send('Network.clearBrowserCookies');
+			await client.send('Network.clearBrowserCache'); */
+
+			await page.setCookie({ name: "auth-token", value: token, domain: ".twitch.tv" })
+			await page.goto(pageUrl)
+
+			res = await await page.waitForResponse("https://gql.twitch.tv/gql")
+			
+			if (!res.ok()) {
+				page.close()
+				return reject()
+			}
+
+			resolve()
+
+			if (screenshot) {
+				if (!fs.existsSync("./screenshots")) {
+					fs.mkdirSync("./screenshots");
+				}
+
+				page.screenshot({ path: `./screenshots/${user}.png` }).then(() => {
+					console.log("Screenshot made for", user)
+				})
+			}
+
+			//Update cookies
+  			page.cookies().then(cookies => {
+				for (cookie of cookies) {
+					if (cookie.name == "auth-token" && cookie.value != token) {
+						tokens[user] = cookie.value
+						console.log("Updating token for ", user)
+						fs.writeFile("./tokens.json", JSON.stringify(tokens))
+					}
+				}
+			}) 
+
+		})
+
+	}
+
+})();
+
+function startTimer() {
 
 	const startDate = new Date()
 	
@@ -44,39 +107,4 @@ const pageUrl = "https://www.twitch.tv/anomaly"
 	
 	}, 1000)
 
-	function watchStream(user, token) {
-
-		return new Promise(async resolve => {
-
-			console.log(`Attempting to login ${user}...`)
-			const page = await browser.newPage();
-			page.setCookie({ name: "auth-token", value: token, domain: "www.twitch.tv" })
-			await page.goto(pageUrl)
-
-			if (await page.$("[data-test-selector=\"anon-user-menu__login-button\"]") !== null)
-				console.log("\033[31;1m" + user + ":\033[0;31m did not login, is the token correct?\033[0m")
-			else console.log("\033[32;1m" + user + ":\033[0;32m Logged in!\033[0m")
-
-			if (screenshot) {
-				if (!fs.existsSync("./screenshots")) {
-					fs.mkdirSync("./screenshots");
-				}
-
-				page.screenshot({ path: `./screenshots/${user}.png` }).then(() => {
-					console.log("Screenshot made for", user)
-				})
-			}
-
-			resolve()
-
-		})
-
-	}
-
-})();
-
-async function wait(ms) {
-	return new Promise(resolve => {
-		setTimeout(resolve, ms);
-	});
 }
